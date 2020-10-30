@@ -38,15 +38,15 @@ final class ComponentManager {
 		entityToComponentBits[entityID] = new BitString();
 	}
 
-	void deleteComponentBitsInternal(Entity entity) {
-		BitString componentBits = this.entityToComponentBits[entity.getID()];
+	void deleteComponentBitsInternal(int entityID) {
+		BitString componentBits = this.entityToComponentBits[entityID];
 
 		while(!componentBits.isEmpty()) {
 			int index = componentBits.indexOfLSB();
-			this.detachT(entity, componentTypeMap.getFromID(index));
+			this.detachT(entityID, componentTypeMap.getFromID(index));
 			componentBits.clear(index);
 		}
-		entityToComponentBits[entity.getID()] = null;
+		entityToComponentBits[entityID] = null;
 	}
 
 	<T extends Component> ComponentType<T> getComponentType(Class<T> componentClass) {
@@ -109,15 +109,15 @@ final class ComponentManager {
 	/**
 	 * See {@link Manager#attach(Entity, Class) wrapper} for more details.
 	 */
-	<T extends Component> T attach(Entity entity, Class<T> componentClass) {
-		return this.attachStrategy.invoke(entity.getID(), this.getComponentType(componentClass));
+	<T extends Component> T attach(int entityID, Class<T> componentClass) {
+		return this.attachStrategy.invoke(entityID, this.getComponentType(componentClass));
 	}
 
 	/**
 	 * See {@link Manager#attachT(Entity, ComponentType) wrapper} for more details.
 	 */
-	<T extends Component> T attachT(Entity entity, ComponentType<T> componentType) {
-		return this.attachStrategy.invoke(entity.getID(), componentType);
+	<T extends Component> T attachT(int entityID, ComponentType<T> componentType) {
+		return this.attachStrategy.invoke(entityID, componentType);
 	}
 
 	/**
@@ -161,20 +161,15 @@ final class ComponentManager {
 	/**
 	 * See {@link Manager#detach(Entity, Class) wrapper} for more details.
 	 */
-	<T extends Component> T detach(Entity entity, Class<T> componentClass) {
-		return this.detachStrategy.invoke(entity.getID(), this.getComponentType(componentClass));
+	<T extends Component> T detach(int entityID, Class<T> componentClass) {
+		return this.detachStrategy.invoke(entityID, this.getComponentType(componentClass));
 	}
 
 	/**
 	 * See {@link Manager#detachT(Entity, ComponentType) wrapper} for more details.
-	 *
-	 * @param entity the entity to which the component will be detached to
-	 * @param componentType type of component to remove from the entity
-	 * @param <T> type of the component
-	 * @return Component instance detached to the entity or NULL if entity does not contain the ComponentType
 	 */
-	<T extends Component> T detachT(Entity entity, ComponentType<T> componentType) {
-		return this.detachStrategy.invoke(entity.getID(), componentType);
+	<T extends Component> T detachT(int entityID, ComponentType<T> componentType) {
+		return this.detachStrategy.invoke(entityID, componentType);
 	}
 
 	/**

@@ -1,18 +1,17 @@
 package ecsploit.ecs.core;
 
+
+/**
+ * A purely "ease-of-use" structure which compiles a unique id and manager to allow for more logical operations
+ */
 public final class Entity {
 	
-	private int id;
+	private final int id;
 	
-	private Manager manager;
+	private final Manager manager;
 
-	Entity() {}
-	
-	void setID(int id) {
+	Entity(int id, Manager manager) {
 		this.id = id;
-	}
-
-	void setManager(Manager manager) {
 		this.manager = manager;
 	}
 
@@ -45,14 +44,14 @@ public final class Entity {
 	}
 
 	/**
-	 * Attach component to this entity. Wrapper for {@link ComponentManager#attach(Entity, Class) ComponentManager.attach(...)}
+	 * Attach component to this entity. Wrapper for {@link ComponentManager#attach(int, Class) ComponentManager.attach(...)}
 	 *
 	 * @param componentClass class of component to be attached
 	 * @param <T> Component Type
 	 * @return component instance of type related to componentType
 	 */
 	public <T extends Component> T attach(Class<T> componentClass) {
-		return manager.getComponentManager().attach(this, componentClass);
+		return manager.getComponentManager().attach(id, componentClass);
 	}
 
 	/**
@@ -63,11 +62,11 @@ public final class Entity {
 	 * @return component instance of type related to componentType
 	 */
 	public <T extends Component> T attachT(ComponentType<T> componentType) {
-		return manager.getComponentManager().attachT(this, componentType);
+		return manager.getComponentManager().attachT(id, componentType);
 	}
 
 	/**
-	 * Detach component to this entity. Wrapper for {@link ComponentManager#detach(Entity, Class)
+	 * Detach component to this entity. Wrapper for {@link ComponentManager#detach(int, Class)
 	 * ComponentManager.detach(...)}
 	 *
 	 * @param componentClass class of component to be detached
@@ -75,7 +74,7 @@ public final class Entity {
 	 * @return component instance detached or NULL if entity does not have component type
 	 */
 	public <T extends Component> T detach(Class<T> componentClass) {
-		return manager.getComponentManager().detach(this, componentClass);
+		return manager.getComponentManager().detach(id, componentClass);
 	}
 
 	/**
@@ -86,7 +85,7 @@ public final class Entity {
 	 * @return component instance detached or NULL if entity does not have component type
 	 */
 	public <T extends Component> T detachT(ComponentType<T> componentType) {
-		return manager.getComponentManager().detachT(this, componentType);
+		return manager.getComponentManager().detachT(id, componentType);
 	}
 
 	public String toString() {

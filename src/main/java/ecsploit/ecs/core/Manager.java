@@ -20,9 +20,12 @@ public class Manager {
 
 	/**
 	 * Get Entity instance for given unique id
+	 * <p>
+	 *     Note: there is only ever one entity instance per id. Subsequent "get" calls return the same object.
+	 * </p>
 	 *
 	 * @param entityID unique int identifier of the entity to be queried
-	 * @return Entity instance with given id
+	 * @return an Entity instance with given id
 	 */
 	public Entity get(int entityID) {
 		return entityManager.getEntity(entityID);
@@ -35,14 +38,13 @@ public class Manager {
 		return entityManager.getEntitiesSize();
 	}
 
-
 	/**
 	 * Creates a new entity. If an entity was recently destroyed, it will try to reuse the destroyed entity object but
 	 * a unique id is always guaranteed.
 	 * @return a new entity instance with unique id
 	 */
 	public Entity entity() {
-		return entityManager.createEntity();
+		return entityManager.getEntity(entityManager.createEntityID());
 	}
 
 	/**
@@ -50,7 +52,7 @@ public class Manager {
 	 * @return entity id of a newly created entity
 	 */
 	public int entityID() {
-		return entityManager.createEntity().getID();
+		return entityManager.createEntityID();
 	}
 
 	/**
@@ -64,7 +66,16 @@ public class Manager {
 	 */
 	public void destroy(Entity entity) {
 		if (entity == null) throw new IllegalArgumentException("Entity argument must be non-null");
-		entityManager.destroyEntity(entity);
+		entityManager.destroyEntity(entity.getID());
+	}
+
+	/**
+	 * See {@link #destroy(Entity) destroy} method for more details.
+	 * @param entityID id of entity to be destroyed
+	 */
+	public void destroyID(int entityID) {
+		if (entityID < 0) throw new IllegalArgumentException("EntityID argument must be non-negative");
+		entityManager.destroyEntity(entityID);
 	}
 
 	/**
@@ -108,7 +119,11 @@ public class Manager {
 	 * @return Component instance attached to the entity
 	 */
 	public <T extends Component> T attach(Entity entity, Class<T> componentClass) {
-		return componentManager.attach(entity, componentClass);
+		return componentManager.attach(entity.getID(), componentClass);
+	}
+
+	public <T extends Component> T attach(int entityID, Class<T> componentClass) {
+		return componentManager.attach(entityID, componentClass);
 	}
 
 	/**
@@ -121,7 +136,11 @@ public class Manager {
 	 * @return Component instance attached to the entity
 	 */
 	public <T extends Component> T attachT(Entity entity, ComponentType<T> componentType) {
-		return componentManager.attachT(entity, componentType);
+		return componentManager.attachT(entity.getID(), componentType);
+	}
+
+	public <T extends Component> T attachT(int entityID, ComponentType<T> componentType) {
+		return componentManager.attachT(entityID, componentType);
 	}
 
 	/**
@@ -140,7 +159,11 @@ public class Manager {
 	 * @return Component instance detached to the entity or NULL if entity does not contain the ComponentType
 	 */
 	public <T extends Component> T detach(Entity entity, Class<T> componentClass) {
-		return componentManager.detach(entity, componentClass);
+		return componentManager.detach(entity.getID(), componentClass);
+	}
+
+	public <T extends Component> T detach(int entityID, Class<T> componentClass) {
+		return componentManager.detach(entityID, componentClass);
 	}
 
 	/**
@@ -153,7 +176,11 @@ public class Manager {
 	 * @return Component instance detached to the entity or NULL if entity does not contain the ComponentType
 	 */
 	public <T extends Component> T detachT(Entity entity, ComponentType<T> componentType) {
-		return componentManager.detachT(entity, componentType);
+		return componentManager.detachT(entity.getID(), componentType);
+	}
+
+	public <T extends Component> T detachT(int entityID, ComponentType<T> componentType) {
+		return componentManager.detachT(entityID, componentType);
 	}
 
 	/**

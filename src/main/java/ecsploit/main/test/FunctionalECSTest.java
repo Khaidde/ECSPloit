@@ -82,7 +82,7 @@ public class FunctionalECSTest {
 		//Player Creation
 		profiler.start();
 		for (int i = 0; i < N_ENTITIES; i++) {
-			manager.entity();
+			manager.entityID();
 		}
 		if (showOutput) CONSOLE.info("EntityCreationTest: (totalEntities=" + this.manager.sizeOfEntities() + ") " + profiler.stop() + " ms");
 	}
@@ -91,10 +91,7 @@ public class FunctionalECSTest {
 		//Player Destruction
 		profiler.start();
 		for (int i = 0; i < N_ENTITIES; i++) {
-			Entity entity = manager.get(i);
-			if (entity != null) {
-				manager.destroy(entity);
-			}
+			manager.destroyID(i);
 		}
 		if (showOutput) CONSOLE.info("EntityDestructionTest: (totalEntities=" + this.manager.sizeOfEntities() + ") " + profiler.stop() + " ms");
 	}
