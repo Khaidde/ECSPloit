@@ -6,7 +6,7 @@ import java.util.Arrays;
 
 public final class EntityManager {
 
-	private Entity[] entityPool = new Entity[1000];
+	private Entity[] entityPool = new Entity[64];
 	private int[] entities = new int[64];
 	private int maxCapacity = 0;
 
