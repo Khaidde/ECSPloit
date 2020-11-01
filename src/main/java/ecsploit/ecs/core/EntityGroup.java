@@ -4,7 +4,7 @@ import ecsploit.utils.collections.SparseList;
 
 abstract class EntityGroup {
 
-	final SparseList entities = new SparseList();
+	protected final SparseList entities = new SparseList();
 	
 	public int size() {
 		return entities.size();

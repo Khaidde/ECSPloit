@@ -1,6 +1,5 @@
 package ecsploit.ecs.core;
 
-import ecsploit.utils.collections.DenseList;
 import ecsploit.utils.collections.PackedObjectList;
 
 import java.util.function.Supplier;
@@ -17,8 +16,6 @@ public class ComponentType<T extends Component> {
     private final PackedObjectList<ComponentObserver<T>> attachComponentObservers = new PackedObjectList<>();
     private final PackedObjectList<ComponentObserver<T>> detachComponentObservers = new PackedObjectList<>();
     private final PackedObjectList<ComponentObserver<T>> changeComponentObservers = new PackedObjectList<>();
-
-    private final PackedObjectList<Bin> changeBins = new PackedObjectList<>();
 
     ComponentType(Class<T> componentClass, int id) {
         this.componentClass = componentClass;
