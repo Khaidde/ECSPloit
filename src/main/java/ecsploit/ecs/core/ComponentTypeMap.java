@@ -18,7 +18,8 @@ public final class ComponentTypeMap {
 				try {
 					return componentConstructor.newInstance();
 				} catch (IllegalAccessException e) {
-					throw new IllegalAccessError(componentClass.getSimpleName() + ".class is not a public class or has no public constructor");
+					throw new IllegalAccessError(componentClass.getSimpleName() + ".class is not a public class or " +
+							"has no public constructor. Component may also be inaccessible due to module protection");
 				} catch (InstantiationException | InvocationTargetException e) {
 					e.printStackTrace();
 				}

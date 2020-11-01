@@ -101,7 +101,7 @@ public class SparseList {
     }
 
     public boolean contains(int id) {
-        if (id >= this.outerList.length) return false;
+        if (id >= this.outerList.length || id < 0) return false;
         int index = this.outerList[id];
         return index < this.size && this.innerList[index] == id;
     }

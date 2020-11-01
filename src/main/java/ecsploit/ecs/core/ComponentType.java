@@ -1,6 +1,5 @@
 package ecsploit.ecs.core;
 
-import ecsploit.ecs.event.ComponentObserver;
 import ecsploit.utils.collections.DenseList;
 import ecsploit.utils.collections.PackedObjectList;
 
@@ -15,8 +14,11 @@ public class ComponentType<T extends Component> {
 
     private final PackedObjectList<T> mappedComponentInstances = new PackedObjectList<>();
 
-    private final DenseList<ComponentObserver> attachComponentObservers = new DenseList<>();
-    private final DenseList<ComponentObserver> detachComponentObservers = new DenseList<>();
+    private final PackedObjectList<ComponentObserver<T>> attachComponentObservers = new PackedObjectList<>();
+    private final PackedObjectList<ComponentObserver<T>> detachComponentObservers = new PackedObjectList<>();
+    private final PackedObjectList<ComponentObserver<T>> changeComponentObservers = new PackedObjectList<>();
+
+    private final PackedObjectList<Bin> changeBins = new PackedObjectList<>();
 
     ComponentType(Class<T> componentClass, int id) {
         this.componentClass = componentClass;
@@ -72,9 +74,25 @@ public class ComponentType<T extends Component> {
      *  </p>
      *
      * @param observer the function to be invoked when a component is attached
+     * @return id of component observer added which can be later used to remove it
      */
-    public void onComponentAttach(ComponentObserver observer) {
-        this.attachComponentObservers.add(observer);
+    public int onComponentAttach(ComponentObserver<T> observer) {
+        return this.attachComponentObservers.addObject(observer);
+    }
+
+    /**
+     * Disconnects an attach observer from listening to component attaches.
+     *
+     * @param attachObserverID unique id assigned to componentObserver when it was registered through the
+     * {@link #onComponentAttach(ComponentObserver) onComponentAttach} function.
+     * @return instance of ComponentObserver disconnected or NULL if ID was invalid
+     */
+    public ComponentObserver<T> disconnectAttachObserver(int attachObserverID) {
+        return this.attachComponentObservers.removeObject(attachObserverID);
+    }
+
+    void notifyAttachObservers(int entityID) {
+        this.attachComponentObservers.forEach(observer -> observer.invoke(entityID, this));
     }
 
     /**
@@ -86,28 +104,79 @@ public class ComponentType<T extends Component> {
      * </p>
      *
      * @param observer the function to be invoked when a component is attached
+     * @return id of component observer added which can be later used to remove it
      */
-    public void onComponentDetach(ComponentObserver observer) {
-        this.detachComponentObservers.add(observer);
+    public int onComponentDetach(ComponentObserver<T> observer) {
+        return this.detachComponentObservers.addObject(observer);
     }
 
-    T attachInternalComponent(int entityID) {
-        T componentInstance = this.componentConstructor.get();
-        this.mappedComponentInstances.addOrReplaceObject(entityID, componentInstance);
-        return componentInstance;
-    }
-
-    void notifyAttachObservers(int entityID) {
-        this.attachComponentObservers.forEach(observer -> observer.invoke(entityID, this));
-    }
-
-    T detachInternalComponent(int entityID) {
-        if (!this.mappedComponentInstances.contains(entityID)) return null;
-        return this.mappedComponentInstances.removeObject(entityID);
+    /**
+     * Disconnects a detach observer from listening to component detaches.
+     *
+     * @param detachObserverID unique id assigned to componentObserver when it was registered through the
+     * {@link #onComponentDetach(ComponentObserver) onComponentDetach} function.
+     * @return instance of ComponentObserver disconnected or NULL if ID was invalid
+     */
+    public ComponentObserver<T> disconnectDetachObserver(int detachObserverID) {
+        return this.detachComponentObservers.removeObject(detachObserverID);
     }
 
     void notifyDetachObservers(int entityID) {
         this.detachComponentObservers.forEach(observer -> observer.invoke(entityID, this));
+    }
+
+    /**
+     * Assigns observer to be invoked whenever a component of this type is changed.
+     *
+     * @param observer the function to be invoked when a component is changed
+     * @return id of component observer added which can be later used to remove it
+     */
+    public int onComponentChange(ComponentObserver<T> observer) {
+        return this.changeComponentObservers.addObject(observer);
+    }
+
+    /**
+     * Disconnects a change observer from listening to component changes.
+     *
+     * @param changeObserverID unique id assigned to componentObserver when it was registered through the
+     * {@link #onComponentChange(ComponentObserver) onComponentChange} function.
+     * @return instance of ComponentObserver disconnected or NULL if ID was invalid
+     */
+    public ComponentObserver<T> disconnectChangeObserver(int changeObserverID) {
+        return this.changeComponentObservers.removeObject(changeObserverID);
+    }
+
+    /**
+     * User should call this function to notify system of changes to a component. All "onComponentChange" callbacks will
+     * be triggered.
+     *
+     * @param entityID id of entity whose component data has changed
+     */
+    public void notifyChangeObservers(int entityID) {
+        this.changeComponentObservers.forEach(observer -> observer.invoke(entityID, this));
+    }
+
+    /**
+     * Creates a new ChangeBin instance for containing changed entities. Use sparingly and try to pass along the same
+     * ChangeBin instance whenever possible.
+     *
+     * @return ChangeBin instance containing all entities who have changed state since last iteration
+     */
+    public Bin createChangeBin() {
+        Bin changeBin = new Bin(this.changeComponentObservers.size(), this);
+        this.onComponentChange((entityID, componentType) -> changeBin.addInternalEntity(entityID));
+        return changeBin;
+    }
+
+    T attachInternalEntity(int entityID) {
+        T componentInstance = this.componentConstructor.get();
+        this.mappedComponentInstances.setObject(entityID, componentInstance);
+        return componentInstance;
+    }
+
+    T detachInternalEntity(int entityID) {
+        if (!this.mappedComponentInstances.contains(entityID)) return null;
+        return this.mappedComponentInstances.removeObject(entityID);
     }
 
     public String toString() {

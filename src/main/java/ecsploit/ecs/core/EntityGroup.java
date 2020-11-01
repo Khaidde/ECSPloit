@@ -1,42 +1,32 @@
 package ecsploit.ecs.core;
 
-import ecsploit.utils.collections.BitString;
 import ecsploit.utils.collections.SparseList;
 
-public class EntityGroup {
+abstract class EntityGroup {
 
-	private final BitString identifierBitString;
-	private final SparseList entities = new SparseList();
-
-	EntityGroup(BitString identifierBitString) {
-		this.identifierBitString = identifierBitString;
-	}
-
-	boolean matches(BitString otherBitString) {
-		return otherBitString.equals(this.identifierBitString);
-	}
+	final SparseList entities = new SparseList();
 	
 	public int size() {
 		return entities.size();
 	}
 	
-	void addEntity(int entityID) {
+	void addInternalEntity(int entityID) {
 		this.entities.add(entityID);
 	}
 	
-	void removeEntity(int entityID) {
+	void removeInternalEntity(int entityID) {
 		this.entities.fastRemove(entityID);
 	}
 	
-	boolean contains(int entityID) {
+	public boolean contains(int entityID) {
 		return this.entities.contains(entityID);
 	}
 
 	/**
 	 * Iterate through every entity in the entityGroup and perform an action on it.
 	 * <p>
-	 *     Note: iterate backwards to avoid potential conflicts with removing and adding entities during iteration. The
-	 *     logic behind it is magic, trust me :P
+	 *     Note: iterate backwards to avoid potential conflicts with removing and adding components to entities during
+	 *     iteration. The logic behind it is magic, trust me :P
 	 * </p>
 	 *
 	 * @param action invoked per entity

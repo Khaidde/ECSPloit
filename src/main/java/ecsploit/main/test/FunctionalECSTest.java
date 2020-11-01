@@ -160,7 +160,7 @@ public class FunctionalECSTest {
 		for (int i = 0; i < N_UPDATES; i++) {
 			manager.update();
 		}
-		if (showOutput) CONSOLE.info("Benchmark 2: (iterations=" + decFormat.format(N_UPDATES * movementSystem.physicsGroup.size()) + ") " + profiler.stop() + " ms");
+		if (showOutput) CONSOLE.info("Benchmark 2: (iterations=" + decFormat.format(N_UPDATES * movementSystem.physicsCat.size()) + ") " + profiler.stop() + " ms");
 	}
 
 	void doBenchmark3() {
@@ -169,7 +169,7 @@ public class FunctionalECSTest {
 		for (int i = 0; i < N_UPDATES; i++) {
 			manager.update();
 		}
-		if (showOutput) CONSOLE.info("Benchmark 3: (iterations=" + decFormat.format(N_UPDATES * movementSystem.physicsGroup.size()) + ") " + profiler.stop() + " ms");
+		if (showOutput) CONSOLE.info("Benchmark 3: (iterations=" + decFormat.format(N_UPDATES * movementSystem.physicsCat.size()) + ") " + profiler.stop() + " ms");
 	}
 
 	void doBenchmark4() {
@@ -178,7 +178,7 @@ public class FunctionalECSTest {
 		for (int i = 0; i < N_UPDATES; i++) {
 			manager.update();
 		}
-		if (showOutput) CONSOLE.info("Benchmark 4: (iterations=" + decFormat.format(N_UPDATES * movementSystem.physicsGroup.size()) + ") " + profiler.stop() + " ms");
+		if (showOutput) CONSOLE.info("Benchmark 4: (iterations=" + decFormat.format(N_UPDATES * movementSystem.physicsCat.size()) + ") " + profiler.stop() + " ms");
 	}
 	
 	public static void main(String[] args) {

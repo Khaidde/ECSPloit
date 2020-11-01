@@ -1,7 +1,7 @@
 package ecsploit.ecs.core;
 
-import ecsploit.ecs.injection.ComponentTypeTarget;
-import ecsploit.ecs.injection.EntityGroupTarget;
+import ecsploit.ecs.injection.TypeTarget;
+import ecsploit.ecs.injection.CatTarget;
 import ecsploit.utils.debug.ToStringBuilder;
 
 import java.lang.reflect.Field;
@@ -13,8 +13,8 @@ public final class SystemGroup extends AbstractSystem {
 
         Class<? extends AbstractSystem> systemClass = system.getClass();
         for (Field field : systemClass.getDeclaredFields()) {
-            if (field.isAnnotationPresent(ComponentTypeTarget.class)) {
-                ComponentTypeTarget componentTypeAnnotation = field.getAnnotation(ComponentTypeTarget.class);
+            if (field.isAnnotationPresent(TypeTarget.class)) {
+                TypeTarget componentTypeAnnotation = field.getAnnotation(TypeTarget.class);
                 Class<? extends Component> componentClass = componentTypeAnnotation.value();
 
                 field.setAccessible(true);
@@ -25,18 +25,14 @@ public final class SystemGroup extends AbstractSystem {
                 }
                 continue;
             }
-            if (field.isAnnotationPresent(EntityGroupTarget.class)) {
-                EntityGroupTarget componentTypeAnnotation = field.getAnnotation(EntityGroupTarget.class);
+            if (field.isAnnotationPresent(CatTarget.class)) {
+                CatTarget componentTypeAnnotation = field.getAnnotation(CatTarget.class);
                 Class<? extends Component>[] componentClasses = componentTypeAnnotation.value();
-
-                ComponentType<?>[] componentTypes = new ComponentType[componentClasses.length];
-                for (int i = 0; i < componentClasses.length; i++) {
-                    componentTypes[i] = manager.getComponentManager().getComponentType(componentClasses[i]);
-                }
+                Category category = manager.getComponentManager().getCategory(componentClasses);
 
                 field.setAccessible(true);
                 try {
-                    field.set(system, manager.getComponentManager().getGroup(componentTypes));
+                    field.set(system, category);
                 } catch (IllegalArgumentException | IllegalAccessException e) {
                     e.printStackTrace();
                 }

@@ -9,6 +9,6 @@ import ecsploit.ecs.core.Component;
 
 @Retention(RetentionPolicy.RUNTIME)
 @Target(ElementType.FIELD)
-public @interface ComponentTypeTarget {
+public @interface TypeTarget {
 	Class<? extends Component> value();
 }

@@ -2,7 +2,11 @@ package ecsploit.utils.collections;
 
 import ecsploit.utils.debug.ToStringBuilder;
 
+import java.lang.reflect.Array;
+import java.lang.reflect.ParameterizedType;
+import java.lang.reflect.Type;
 import java.util.Arrays;
+import java.util.Iterator;
 import java.util.function.Consumer;
 
 /**
@@ -14,7 +18,7 @@ public class DenseList<T> {
 	
 	private int size;
 	private T[] data;
-	
+
 	public DenseList() {
 		this(64);
 	}
@@ -113,6 +117,10 @@ public class DenseList<T> {
 		for (int i = 0; i < size; i++) {
 			action.accept(data[i]);
 		}
+	}
+
+	public T[] data() {
+		return Arrays.copyOf(data, size);
 	}
 
 	public String toString() {

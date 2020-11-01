@@ -14,12 +14,11 @@ final class ComponentManager {
 	//Map from entityID to respective component bits
 	private BitString[] entityToComponentBits = new BitString[64];
 
+	private final DenseList<Category> categories = new DenseList<>(); //List of all entityGroups
+
 	//Attach and Detach strategies
 	private ComponentOperationStrategy attachStrategy;
 	private ComponentOperationStrategy detachStrategy;
-	
-	//Dealing with entity groups and all queried component bit combinations
-	private final DenseList<EntityGroup> entityGroups = new DenseList<>(); //List of all entityGroups
 
 	//Deferred component operations
 	private final DenseQueue<ComponentOperation> deferredAttaches = new DenseQueue<>();
@@ -77,7 +76,7 @@ final class ComponentManager {
 	 */
 	private final ComponentOperationStrategy immediateAttachStrategy = new ComponentOperationStrategy(this) {
 		public <T extends Component> T invoke(int entityID, ComponentType<T> componentType) {
-			T componentInstance = componentType.attachInternalComponent(entityID);
+			T componentInstance = componentType.attachInternalEntity(entityID);
 
 			this.componentManager.setComponentFlag(entityID, componentType.getID());
 			componentType.notifyAttachObservers(entityID);
@@ -100,7 +99,7 @@ final class ComponentManager {
 	 */
 	private final ComponentOperationStrategy deferredAttachStrategy = new ComponentOperationStrategy(this) {
 		public <T extends Component> T invoke(int entityID, ComponentType<T> componentType) {
-			T componentInstance = componentType.attachInternalComponent(entityID);
+			T componentInstance = componentType.attachInternalEntity(entityID);
 			this.componentManager.deferredAttaches.push(new ComponentOperation(entityID, componentType));
 			return componentInstance;
 		}
@@ -129,7 +128,7 @@ final class ComponentManager {
 	 */
 	private final ComponentOperationStrategy immediateDetachStrategy = new ComponentOperationStrategy(this) {
 		public <T extends Component> T invoke(int entityID, ComponentType<T> componentType) {
-			T componentInstance = componentType.detachInternalComponent(entityID);
+			T componentInstance = componentType.detachInternalEntity(entityID);
 			if (componentInstance == null) return null;
 
 			this.componentManager.clearComponentFlag(entityID, componentType.getID());
@@ -151,7 +150,7 @@ final class ComponentManager {
 	 */
 	final ComponentOperationStrategy deferredDetachStrategy = new ComponentOperationStrategy(this) {
 		public <T extends Component> T invoke(int entityID, ComponentType<T> componentType) {
-			T componentInstance = componentType.detachInternalComponent(entityID);
+			T componentInstance = componentType.detachInternalEntity(entityID);
 			if (componentInstance == null) return null;
 			this.componentManager.deferredDetaches.push(new ComponentOperation(entityID, componentType));
 			return componentInstance;
@@ -180,42 +179,54 @@ final class ComponentManager {
 	}
 
 	/**
-	 * See {@link Manager#group(ComponentType[]) wrapper} for more details.
+	 * See {@link Manager#category(Class[]) wrapper} for more details.
 	 */
 	@SafeVarargs
-	final EntityGroup getGroup(ComponentType<? extends Component>... componentTypes) {
+	final Category getCategory(Class<? extends Component>... componentClasses) {
+		ComponentType<?>[] componentTypes = new ComponentType[componentClasses.length];
+		for (int i = 0; i < componentClasses.length; i++) {
+			componentTypes[i] = manager.getComponentManager().getComponentType(componentClasses[i]);
+		}
+		return this.getCategoryT(componentTypes);
+	}
+
+	/**
+	 * See {@link Manager#categoryT(ComponentType[]) wrapper} for more details.
+	 */
+	@SafeVarargs
+	final Category getCategoryT(ComponentType<? extends Component>... componentTypes) {
 		BitString queriedComponents = new BitString();
 		for (ComponentType<? extends Component> type: componentTypes) { //Generate bitString from componentType list
 			queriedComponents.set(type.getID());
 		}
-		for (int i = 0; i < entityGroups.size(); i++) {
-			EntityGroup group = entityGroups.fastGet(i);
-			if (group.matches(queriedComponents)) { //Attempt to find cache of queried components
-				return group;
+		for (int i = 0; i < categories.size(); i++) {
+			Category category = categories.fastGet(i);
+			if (category.matches(queriedComponents)) { //Attempt to find cache of queried components
+				return category;
 			}
 		}
 
-		final BitString currentEntityGroupBits = new BitString(queriedComponents);
-		EntityGroup entityGroup = new EntityGroup(currentEntityGroupBits);
+		final BitString currentCategoryBits = new BitString(queriedComponents);
+		Category category = new Category(currentCategoryBits);
 		manager.getEntityManager().forEach(entityID -> {
 			if (this.entityToComponentBits[entityID].includes(queriedComponents)) {
-				entityGroup.addEntity(entityID);
+				category.addInternalEntity(entityID);
 			}
 		});
-		this.entityGroups.add(entityGroup); //Cache the entityGroup for future retrieval
+		this.categories.add(category); //Cache the category for future retrieval
 
-		for (ComponentType<? extends Component> type: componentTypes) { //Add dependency handlers to automatically manage entity group in the future
+		for (ComponentType<? extends Component> type: componentTypes) { //Add dependency handlers to automatically manage category in the future
 			type.onComponentAttach((entityID, componentType) -> {
-				if (!entityGroup.contains(entityID) && this.entityToComponentBits[entityID].includes(currentEntityGroupBits)) {
-					entityGroup.addEntity(entityID);
+				if (!category.contains(entityID) && this.entityToComponentBits[entityID].includes(currentCategoryBits)) {
+					category.addInternalEntity(entityID);
 				}
 			});
 			type.onComponentDetach((entityID, componentType) -> {
-				if (entityGroup.contains(entityID)) entityGroup.removeEntity(entityID);
+				if (category.contains(entityID)) category.removeInternalEntity(entityID);
 			});
 		}
 
-		return entityGroup;
+		return category;
 	}
 
 	void clean() {

@@ -195,18 +195,30 @@ public class Manager {
 	}
 
 	/**
-	 * Gets an EntityGroup which keeps an up-to-date list of all entities with the corresponding component types.
+	 * Gets a Category object which keeps an up-to-date list of all entities with the corresponding component types.
 	 * <p>
 	 *     Note: It is assumed that component types in the list are unique. Undefined behavior can arise if the same
 	 *     component type is listed repeatedly.
 	 * </p>
 	 *
+	 * @param componentClasses list of component classes to query
+	 * @return real-time updated Category reference
+	 */
+	@SafeVarargs
+	public final Category category(Class<? extends Component>... componentClasses) {
+		return componentManager.getCategory(componentClasses);
+	}
+
+	/**
+	 * Faster method of generating/finding a category with relevant components. See {@link #category(Class[]) group}
+	 * for more details.
+	 *
 	 * @param componentTypes list of component types to query
 	 * @return real-time updated EntityGroup reference
 	 */
 	@SafeVarargs
-	public final EntityGroup group(ComponentType<? extends Component>... componentTypes) {
-		return componentManager.getGroup(componentTypes);
+	public final Category categoryT(ComponentType<? extends Component>... componentTypes) {
+		return componentManager.getCategoryT(componentTypes);
 	}
 
 	//SYSTEM MANAGER WRAPPER FUNCTIONS//

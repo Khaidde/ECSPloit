@@ -1,11 +1,8 @@
 package ecsploit.main.test;
 
-import ecsploit.ecs.core.AbstractSystem;
-import ecsploit.ecs.core.Component;
-import ecsploit.ecs.core.ComponentType;
-import ecsploit.ecs.core.EntityGroup;
-import ecsploit.ecs.injection.ComponentTypeTarget;
-import ecsploit.ecs.injection.EntityGroupTarget;
+import ecsploit.ecs.core.*;
+import ecsploit.ecs.injection.TypeTarget;
+import ecsploit.ecs.injection.CatTarget;
 import ecsploit.ecs.injection.ExecuteAfter;
 import ecsploit.ecs.injection.ExecuteBefore;
 import ecsploit.utils.debug.ToStringBuilder;
@@ -100,16 +97,16 @@ class TestGameLib {
 
     public static final class MovementSystem extends AbstractSystem {
 
-        @ComponentTypeTarget(Transform.class)
+        @TypeTarget(Transform.class)
         protected ComponentType<Transform> transformType;
-        @ComponentTypeTarget(Velocity.class)
+        @TypeTarget(Velocity.class)
         protected ComponentType<Velocity> velocityType;
 
-        @EntityGroupTarget({Transform.class, Velocity.class, Sprite.class})
-        protected EntityGroup physicsGroup;
+        @CatTarget({Transform.class, Velocity.class, Sprite.class})
+        protected Category physicsCat;
 
         public void execute() {
-            physicsGroup.forEachEntity(eID -> {
+            physicsCat.forEachEntity(eID -> {
                 Transform transform = transformType.retrieve(eID);
                 Velocity velocity = velocityType.retrieve(eID);
 
@@ -121,13 +118,13 @@ class TestGameLib {
 
     public static final class RenderSystem extends AbstractSystem {
 
-        @ComponentTypeTarget(Transform.class) private ComponentType<Transform> transformType;
-        @ComponentTypeTarget(Sprite.class) private ComponentType<Sprite> spriteType;
+        @TypeTarget(Transform.class) private ComponentType<Transform> transformType;
+        @TypeTarget(Sprite.class) private ComponentType<Sprite> spriteType;
 
-        @EntityGroupTarget({Transform.class, Sprite.class}) private EntityGroup renderableEntities;
+        @CatTarget({Transform.class, Sprite.class}) private Category renderableEntitiesCat;
 
         protected void execute() {
-            renderableEntities.forEachEntity(eID -> {
+            renderableEntitiesCat.forEachEntity(eID -> {
                 Transform transform = transformType.retrieve(eID);
                 Sprite sprite = spriteType.retrieve(eID);
 
