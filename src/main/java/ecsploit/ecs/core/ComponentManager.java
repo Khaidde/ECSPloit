@@ -14,6 +14,7 @@ final class ComponentManager {
 	//Map from entityID to respective component bits
 	private BitString[] entityToComponentBits = new BitString[64];
 
+	private final DenseList<BitString> categoryBitStrings = new DenseList<>(); //List of BitStrings in same order as categories
 	private final DenseList<Category> categories = new DenseList<>(); //List of all entityGroups
 
 	//Attach and Detach strategies
@@ -52,11 +53,11 @@ final class ComponentManager {
 		return componentTypeMap.getComponentType(componentClass);
 	}
 
-	private void setComponentFlag(int entityID, int componentID) {
+	private void setComponentBit(int entityID, int componentID) {
 		this.entityToComponentBits[entityID].set(componentID);
 	}
 
-	private void clearComponentFlag(int entityID, int componentID) {
+	private void clearComponentBit(int entityID, int componentID) {
 		this.entityToComponentBits[entityID].clear(componentID);
 	}
 
@@ -76,9 +77,9 @@ final class ComponentManager {
 	 */
 	private final ComponentOperationStrategy immediateAttachStrategy = new ComponentOperationStrategy(this) {
 		public <T extends Component> T invoke(int entityID, ComponentType<T> componentType) {
-			T componentInstance = componentType.attachInternalEntity(entityID);
+			T componentInstance = componentType.addInternalEntity(entityID);
 
-			this.componentManager.setComponentFlag(entityID, componentType.getID());
+			this.componentManager.setComponentBit(entityID, componentType.getID());
 			componentType.notifyAttachObservers(entityID);
 			return componentInstance;
 		}
@@ -99,7 +100,7 @@ final class ComponentManager {
 	 */
 	private final ComponentOperationStrategy deferredAttachStrategy = new ComponentOperationStrategy(this) {
 		public <T extends Component> T invoke(int entityID, ComponentType<T> componentType) {
-			T componentInstance = componentType.attachInternalEntity(entityID);
+			T componentInstance = componentType.addInternalEntity(entityID);
 			this.componentManager.deferredAttaches.push(new ComponentOperation(entityID, componentType));
 			return componentInstance;
 		}
@@ -128,10 +129,10 @@ final class ComponentManager {
 	 */
 	private final ComponentOperationStrategy immediateDetachStrategy = new ComponentOperationStrategy(this) {
 		public <T extends Component> T invoke(int entityID, ComponentType<T> componentType) {
-			T componentInstance = componentType.detachInternalEntity(entityID);
+			T componentInstance = componentType.removeInternalEntity(entityID);
 			if (componentInstance == null) return null;
 
-			this.componentManager.clearComponentFlag(entityID, componentType.getID());
+			this.componentManager.clearComponentBit(entityID, componentType.getID());
 			componentType.notifyDetachObservers(entityID);
 			return componentInstance;
 		}
@@ -150,7 +151,7 @@ final class ComponentManager {
 	 */
 	final ComponentOperationStrategy deferredDetachStrategy = new ComponentOperationStrategy(this) {
 		public <T extends Component> T invoke(int entityID, ComponentType<T> componentType) {
-			T componentInstance = componentType.detachInternalEntity(entityID);
+			T componentInstance = componentType.removeInternalEntity(entityID);
 			if (componentInstance == null) return null;
 			this.componentManager.deferredDetaches.push(new ComponentOperation(entityID, componentType));
 			return componentInstance;
@@ -200,14 +201,16 @@ final class ComponentManager {
 			queriedComponents.set(type.getID());
 		}
 		for (int i = 0; i < categories.size(); i++) {
-			Category category = categories.fastGet(i);
-			if (category.matches(queriedComponents)) { //Attempt to find cache of queried components
-				return category;
+			if (this.categoryBitStrings.fastGet(i).equals(queriedComponents)) { //Attempt to find cache of queried components
+				return categories.fastGet(i);
 			}
 		}
 
-		final BitString currentCategoryBits = new BitString(queriedComponents);
-		Category category = new Category(currentCategoryBits);
+		return createNewCategory(queriedComponents, componentTypes);
+	}
+
+	final Category createNewCategory(BitString queriedComponents, ComponentType<? extends Component>[] componentTypes) {
+		Category category = new Category();
 		manager.getEntityManager().forEach(entityID -> {
 			if (this.entityToComponentBits[entityID].includes(queriedComponents)) {
 				category.addInternalEntity(entityID);
@@ -216,16 +219,18 @@ final class ComponentManager {
 		this.categories.add(category); //Cache the category for future retrieval
 
 		for (ComponentType<? extends Component> type: componentTypes) { //Add dependency handlers to automatically manage category in the future
-			type.onComponentAttach((entityID, componentType) -> {
-				if (!category.contains(entityID) && this.entityToComponentBits[entityID].includes(currentCategoryBits)) {
+			type.onComponentAttach(entityID -> {
+				if (!category.contains(entityID) && this.entityToComponentBits[entityID].includes(queriedComponents)) {
 					category.addInternalEntity(entityID);
 				}
 			});
-			type.onComponentDetach((entityID, componentType) -> {
+			type.onComponentDetach(entityID -> {
 				if (category.contains(entityID)) category.removeInternalEntity(entityID);
 			});
+			type.onComponentChange(entityID -> {
+				if (category.contains(entityID)) category.notifyChangeObservers(entityID);
+			});
 		}
-
 		return category;
 	}
 
@@ -233,7 +238,7 @@ final class ComponentManager {
 		int totalDeferredAttaches = deferredAttaches.size();
 		for (int i = 0; i < totalDeferredAttaches; i++) {
 			ComponentOperation attachOperation = deferredAttaches.poll();
-			this.setComponentFlag(attachOperation.entityID, attachOperation.componentType.getID());
+			this.setComponentBit(attachOperation.entityID, attachOperation.componentType.getID());
 			attachOperation.componentType.notifyAttachObservers(attachOperation.entityID);
 		}
 		this.deferredAttaches.reset();
@@ -241,7 +246,7 @@ final class ComponentManager {
 		int totalDeferredDetaches = deferredDetaches.size();
 		for (int i = 0; i < totalDeferredDetaches; i++) {
 			ComponentOperation detachOperation = deferredDetaches.poll();
-			this.clearComponentFlag(detachOperation.entityID, detachOperation.componentType.getID());
+			this.clearComponentBit(detachOperation.entityID, detachOperation.componentType.getID());
 			detachOperation.componentType.notifyDetachObservers(detachOperation.entityID);
 		}
 		this.deferredDetaches.reset();

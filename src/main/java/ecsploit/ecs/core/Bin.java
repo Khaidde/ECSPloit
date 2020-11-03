@@ -1,16 +1,31 @@
 package ecsploit.ecs.core;
 
+import ecsploit.utils.collections.SparseList;
+
 /**
  * Group of entities which is updated with components which have recently been changed
  */
-public class Bin extends EntityGroup {
+public final class Bin {
 
-    private final int observerID;
-    private final ComponentType<? extends Component> componentType;
+    private int observerID;
+    private final EntityStream inputEventStream;
 
-    Bin(int observerID, ComponentType<? extends Component> componentType) {
+    private final SparseList entities = new SparseList();
+
+    Bin(EntityStream inputEventStream) {
+        this.inputEventStream = inputEventStream;
+    }
+
+    void setObserverID(int observerID) {
         this.observerID = observerID;
-        this.componentType = componentType;
+    }
+
+    boolean contains(int entityID) {
+        return this.entities.contains(entityID);
+    }
+
+    void addInternalEntity(int entityID) {
+        this.entities.add(entityID);
     }
 
     /**
@@ -19,14 +34,18 @@ public class Bin extends EntityGroup {
      * @param action invoked per entity
      */
     public void forEachEntity(EntityAction action) {
-        super.forEachEntity(action);
+        if (entities.isEmpty()) return;
+        int entitySize = this.entities.size();
+        for (int i = entitySize - 1; i >= 0; i--) {
+            action.accept(this.entities.fastGet(i));
+        }
         this.entities.clear();
     }
 
     /**
-     * Disconnects the bin from the affiliated group. The bin will no longer be updated in real time.
+     * Disconnects the bin from the entity stream. The bin will no longer be updated in real time.
      */
     public void dispose() {
-        this.componentType.disconnectChangeObserver(observerID);
+        this.inputEventStream.disconnectObserver(observerID);
     }
 }

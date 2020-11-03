@@ -13,9 +13,9 @@ public class ComponentType<T extends Component> {
 
     private final PackedObjectList<T> mappedComponentInstances = new PackedObjectList<>();
 
-    private final PackedObjectList<ComponentObserver<T>> attachComponentObservers = new PackedObjectList<>();
-    private final PackedObjectList<ComponentObserver<T>> detachComponentObservers = new PackedObjectList<>();
-    private final PackedObjectList<ComponentObserver<T>> changeComponentObservers = new PackedObjectList<>();
+    private final EntityStream attachStream = new EntityStream();
+    private final EntityStream detachStream = new EntityStream();
+    private final EntityStream changeStream = new EntityStream();
 
     ComponentType(Class<T> componentClass, int id) {
         this.componentClass = componentClass;
@@ -62,64 +62,96 @@ public class ComponentType<T extends Component> {
         return this.mappedComponentInstances.getObject(entityID);
     }
 
+    T addInternalEntity(int entityID) {
+        T componentInstance = this.componentConstructor.get();
+        this.mappedComponentInstances.setObject(entityID, componentInstance);
+        return componentInstance;
+    }
+
+    T removeInternalEntity(int entityID) {
+        if (!this.mappedComponentInstances.contains(entityID)) return null;
+        return this.mappedComponentInstances.removeObject(entityID);
+    }
+
+    /**
+     * @return entity stream which triggers on component attaches
+     */
+    public EntityStream attachStream() {
+        return this.attachStream;
+    }
+
     /**
      * Assigns observer to be invoked whenever a component of this type is attached to an entity.
      * <p>
-     *     Note: Observer won't be invoked immediately unless permitted by the SystemManager. This includes times
-     * 	   in the pipeline where the user manually toggles the setting in the SystemManager or after each system
+     *     Note: Observer won't be invoked immediately upon attach unless permitted by the SystemManager. This includes
+     *     times in the pipeline where the user manually toggles the setting in the SystemManager or after each system
      * 	   update.
      *  </p>
      *
      * @param observer the function to be invoked when a component is attached
      * @return id of component observer added which can be later used to remove it
      */
-    public int onComponentAttach(ComponentObserver<T> observer) {
-        return this.attachComponentObservers.addObject(observer);
+    public int onComponentAttach(EntityObserver observer) {
+        return this.attachStream.connectObserver(observer);
     }
 
     /**
      * Disconnects an attach observer from listening to component attaches.
      *
      * @param attachObserverID unique id assigned to componentObserver when it was registered through the
-     * {@link #onComponentAttach(ComponentObserver) onComponentAttach} function.
-     * @return instance of ComponentObserver disconnected or NULL if ID was invalid
+     * {@link #onComponentAttach(EntityObserver) onComponentAttach} function.
+     * @return instance of EntityObserver disconnected or NULL if ID was invalid
      */
-    public ComponentObserver<T> disconnectAttachObserver(int attachObserverID) {
-        return this.attachComponentObservers.removeObject(attachObserverID);
+    public EntityObserver disconnectAttachObserver(int attachObserverID) {
+        return this.attachStream.disconnectObserver(attachObserverID);
     }
 
     void notifyAttachObservers(int entityID) {
-        this.attachComponentObservers.forEach(observer -> observer.invoke(entityID, this));
+        this.attachStream.notifyObservers(entityID);
     }
 
     /**
-     * Assigns observer to be invoked whenever a component of this type is detached to an entity.
+     * @return entity stream which triggers on component detaches
+     */
+    public EntityStream detachStream() {
+        return this.detachStream;
+    }
+
+    /**
+     * Assigns observer to be invoked whenever a component of this type is detached from an entity.
      * <p>
-     *     Note: Observer won't be invoked immediately unless permitted by the SystemManager. This includes times
-     * 	   in the pipeline where the user manually toggles the setting in the SystemManager or after each system
+     *     Note: Observer won't be invoked immediately upon detach unless permitted by the SystemManager. This includes
+     *     times in the pipeline where the user manually toggles the setting in the SystemManager or after each system
      * 	   update.
-     * </p>
+     *  </p>
      *
-     * @param observer the function to be invoked when a component is attached
+     * @param observer the function to be invoked when a component is detached
      * @return id of component observer added which can be later used to remove it
      */
-    public int onComponentDetach(ComponentObserver<T> observer) {
-        return this.detachComponentObservers.addObject(observer);
+    public int onComponentDetach(EntityObserver observer) {
+        return this.detachStream.connectObserver(observer);
     }
 
     /**
      * Disconnects a detach observer from listening to component detaches.
      *
-     * @param detachObserverID unique id assigned to componentObserver when it was registered through the
-     * {@link #onComponentDetach(ComponentObserver) onComponentDetach} function.
-     * @return instance of ComponentObserver disconnected or NULL if ID was invalid
+     * @param detachObserverID unique id assigned to EntityObserver when it was registered through the
+     * {@link #onComponentDetach(EntityObserver) onComponentDetach} function.
+     * @return instance of EntityObserver disconnected or NULL if ID was invalid
      */
-    public ComponentObserver<T> disconnectDetachObserver(int detachObserverID) {
-        return this.detachComponentObservers.removeObject(detachObserverID);
+    public EntityObserver disconnectDetachObserver(int detachObserverID) {
+        return this.detachStream.disconnectObserver(detachObserverID);
     }
 
     void notifyDetachObservers(int entityID) {
-        this.detachComponentObservers.forEach(observer -> observer.invoke(entityID, this));
+        this.detachStream.notifyObservers(entityID);
+    }
+
+    /**
+     * @return entity stream which triggers on component changes
+     */
+    public EntityStream changeStream() {
+        return this.changeStream;
     }
 
     /**
@@ -128,19 +160,19 @@ public class ComponentType<T extends Component> {
      * @param observer the function to be invoked when a component is changed
      * @return id of component observer added which can be later used to remove it
      */
-    public int onComponentChange(ComponentObserver<T> observer) {
-        return this.changeComponentObservers.addObject(observer);
+    public int onComponentChange(EntityObserver observer) {
+        return this.changeStream.connectObserver(observer);
     }
 
     /**
      * Disconnects a change observer from listening to component changes.
      *
-     * @param changeObserverID unique id assigned to componentObserver when it was registered through the
-     * {@link #onComponentChange(ComponentObserver) onComponentChange} function.
-     * @return instance of ComponentObserver disconnected or NULL if ID was invalid
+     * @param changeObserverID unique id assigned to EventObserver when it was registered through the
+     * {@link #onComponentChange(EntityObserver) onComponentChange} function.
+     * @return instance of EntityObserver disconnected or NULL if ID was invalid
      */
-    public ComponentObserver<T> disconnectChangeObserver(int changeObserverID) {
-        return this.changeComponentObservers.removeObject(changeObserverID);
+    public EntityObserver disconnectChangeObserver(int changeObserverID) {
+        return this.changeStream.disconnectObserver(changeObserverID);
     }
 
     /**
@@ -150,30 +182,7 @@ public class ComponentType<T extends Component> {
      * @param entityID id of entity whose component data has changed
      */
     public void notifyChangeObservers(int entityID) {
-        this.changeComponentObservers.forEach(observer -> observer.invoke(entityID, this));
-    }
-
-    /**
-     * Creates a new ChangeBin instance for containing changed entities. Use sparingly and try to pass along the same
-     * ChangeBin instance whenever possible.
-     *
-     * @return ChangeBin instance containing all entities who have changed state since last iteration
-     */
-    public Bin createChangeBin() {
-        Bin changeBin = new Bin(this.changeComponentObservers.size(), this);
-        this.onComponentChange((entityID, componentType) -> changeBin.addInternalEntity(entityID));
-        return changeBin;
-    }
-
-    T attachInternalEntity(int entityID) {
-        T componentInstance = this.componentConstructor.get();
-        this.mappedComponentInstances.setObject(entityID, componentInstance);
-        return componentInstance;
-    }
-
-    T detachInternalEntity(int entityID) {
-        if (!this.mappedComponentInstances.contains(entityID)) return null;
-        return this.mappedComponentInstances.removeObject(entityID);
+        this.changeStream.notifyObservers(entityID);
     }
 
     public String toString() {
