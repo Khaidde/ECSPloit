@@ -31,7 +31,12 @@ public final class ComponentTypeMap {
 	}
 
 	@SuppressWarnings("unchecked")
-	public <T extends Component> ComponentType<T> getFromID(int componentID) {
+	<T extends Component> ComponentType<T>[] getComponentTypes() {
+		return (ComponentType<T>[]) componentTypes.values().toArray(new ComponentType<?>[0]);
+	}
+
+	@SuppressWarnings("unchecked")
+	<T extends Component> ComponentType<T> getFromID(int componentID) {
 		if (componentID >= componentTypes.size()) return null;
 		for (ComponentType<?> componentType: componentTypes.values()) {
 			if (componentType.getID() == componentID) return (ComponentType<T>) componentType;
@@ -40,7 +45,7 @@ public final class ComponentTypeMap {
 	}
 
 	@SuppressWarnings("unchecked")
-	public <T extends Component> ComponentType<T> getComponentType(Class<T> componentClass) {
+	 <T extends Component> ComponentType<T> getComponentType(Class<T> componentClass) {
 		return (ComponentType<T>) componentTypes.computeIfAbsent(componentClass, key -> {
 			ComponentType<T> componentType = new ComponentType<>(componentClass, idCounter++);
 			componentType.registerConstructor(this.getDefaultConstructor(componentClass));

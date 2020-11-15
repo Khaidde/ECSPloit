@@ -9,7 +9,7 @@ import java.util.Arrays;
 final class ComponentManager {
 	
 	//Map of componentClass to respective componentType
-	private final ComponentTypeMap componentTypeMap = new ComponentTypeMap();
+	final ComponentTypeMap componentTypeMap = new ComponentTypeMap();
 	
 	//Map from entityID to respective component bits
 	private BitString[] entityToComponentBits = new BitString[64];
@@ -62,24 +62,24 @@ final class ComponentManager {
 	}
 
 	void setToImmediateStrategy() {
-		this.attachStrategy = this.immediateAttachStrategy;
-		this.detachStrategy = this.immediateDetachStrategy;
+		this.attachStrategy = ComponentManager.immediateAttachStrategy;
+		this.detachStrategy = ComponentManager.immediateDetachStrategy;
 	}
 
 	void setToDeferredStrategy() {
-		this.attachStrategy = this.deferredAttachStrategy;
-		this.detachStrategy = this.deferredDetachStrategy;
+		this.attachStrategy = ComponentManager.deferredAttachStrategy;
+		this.detachStrategy = ComponentManager.deferredDetachStrategy;
 	}
 
 	/**
 	 * Creates Component instance, and immediately updates the ComponentType and notifies related EntityGroups of
 	 * changes. Also notifies all the attach ComponentObservers.
 	 */
-	private final ComponentOperationStrategy immediateAttachStrategy = new ComponentOperationStrategy(this) {
-		public <T extends Component> T invoke(int entityID, ComponentType<T> componentType) {
+	private static final ComponentOperationStrategy immediateAttachStrategy = new ComponentOperationStrategy() {
+		public <T extends Component> T invoke(ComponentManager componentManager, int entityID, ComponentType<T> componentType) {
 			T componentInstance = componentType.addInternalEntity(entityID);
 
-			this.componentManager.setComponentBit(entityID, componentType.getID());
+			componentManager.setComponentBit(entityID, componentType.getID());
 			componentType.notifyAttachObservers(entityID);
 			return componentInstance;
 		}
@@ -98,10 +98,10 @@ final class ComponentManager {
 	 *     </ul>
 	 * </p>
 	 */
-	private final ComponentOperationStrategy deferredAttachStrategy = new ComponentOperationStrategy(this) {
-		public <T extends Component> T invoke(int entityID, ComponentType<T> componentType) {
+	private static final ComponentOperationStrategy deferredAttachStrategy = new ComponentOperationStrategy() {
+		public <T extends Component> T invoke(ComponentManager componentManager, int entityID, ComponentType<T> componentType) {
 			T componentInstance = componentType.addInternalEntity(entityID);
-			this.componentManager.deferredAttaches.push(new ComponentOperation(entityID, componentType));
+			componentManager.deferredAttaches.push(new ComponentOperation(entityID, componentType));
 			return componentInstance;
 		}
 	};
@@ -110,14 +110,14 @@ final class ComponentManager {
 	 * See {@link Manager#attach(Entity, Class) wrapper} for more details.
 	 */
 	<T extends Component> T attach(int entityID, Class<T> componentClass) {
-		return this.attachStrategy.invoke(entityID, this.getComponentType(componentClass));
+		return this.attachStrategy.invoke(this, entityID, this.getComponentType(componentClass));
 	}
 
 	/**
 	 * See {@link Manager#attachT(Entity, ComponentType) wrapper} for more details.
 	 */
 	<T extends Component> T attachT(int entityID, ComponentType<T> componentType) {
-		return this.attachStrategy.invoke(entityID, componentType);
+		return this.attachStrategy.invoke(this, entityID, componentType);
 	}
 
 	/**
@@ -127,12 +127,12 @@ final class ComponentManager {
 	 *     Note: Returns null if entity does not contain the componentType
 	 * </p>
 	 */
-	private final ComponentOperationStrategy immediateDetachStrategy = new ComponentOperationStrategy(this) {
-		public <T extends Component> T invoke(int entityID, ComponentType<T> componentType) {
+	private static final ComponentOperationStrategy immediateDetachStrategy = new ComponentOperationStrategy() {
+		public <T extends Component> T invoke(ComponentManager componentManager, int entityID, ComponentType<T> componentType) {
 			T componentInstance = componentType.removeInternalEntity(entityID);
 			if (componentInstance == null) return null;
 
-			this.componentManager.clearComponentBit(entityID, componentType.getID());
+			componentManager.clearComponentBit(entityID, componentType.getID());
 			componentType.notifyDetachObservers(entityID);
 			return componentInstance;
 		}
@@ -149,11 +149,11 @@ final class ComponentManager {
 	 *     </ul>
 	 * </p>
 	 */
-	final ComponentOperationStrategy deferredDetachStrategy = new ComponentOperationStrategy(this) {
-		public <T extends Component> T invoke(int entityID, ComponentType<T> componentType) {
+	private static final ComponentOperationStrategy deferredDetachStrategy = new ComponentOperationStrategy() {
+		public <T extends Component> T invoke(ComponentManager componentManager, int entityID, ComponentType<T> componentType) {
 			T componentInstance = componentType.removeInternalEntity(entityID);
 			if (componentInstance == null) return null;
-			this.componentManager.deferredDetaches.push(new ComponentOperation(entityID, componentType));
+			componentManager.deferredDetaches.push(new ComponentOperation(entityID, componentType));
 			return componentInstance;
 		}
 	};
@@ -162,14 +162,14 @@ final class ComponentManager {
 	 * See {@link Manager#detach(Entity, Class) wrapper} for more details.
 	 */
 	<T extends Component> T detach(int entityID, Class<T> componentClass) {
-		return this.detachStrategy.invoke(entityID, this.getComponentType(componentClass));
+		return this.detachStrategy.invoke(this, entityID, this.getComponentType(componentClass));
 	}
 
 	/**
 	 * See {@link Manager#detachT(Entity, ComponentType) wrapper} for more details.
 	 */
 	<T extends Component> T detachT(int entityID, ComponentType<T> componentType) {
-		return this.detachStrategy.invoke(entityID, componentType);
+		return this.detachStrategy.invoke(this, entityID, componentType);
 	}
 
 	/**
@@ -210,13 +210,14 @@ final class ComponentManager {
 	}
 
 	final Category createNewCategory(BitString queriedComponents, ComponentType<? extends Component>[] componentTypes) {
-		Category category = new Category();
+		Category category = new Category(this);
 		manager.getEntityManager().forEach(entityID -> {
 			if (this.entityToComponentBits[entityID].includes(queriedComponents)) {
 				category.addInternalEntity(entityID);
 			}
 		});
 		this.categories.add(category); //Cache the category for future retrieval
+		this.categoryBitStrings.add(queriedComponents);
 
 		for (ComponentType<? extends Component> type: componentTypes) { //Add dependency handlers to automatically manage category in the future
 			type.onComponentAttach(entityID -> {
@@ -252,15 +253,9 @@ final class ComponentManager {
 		this.deferredDetaches.reset();
 	}
 
-	private abstract static class ComponentOperationStrategy {
+	private interface ComponentOperationStrategy {
 
-		final ComponentManager componentManager;
-
-		public ComponentOperationStrategy(ComponentManager componentManager) {
-			this.componentManager = componentManager;
-		}
-
-		abstract <T extends Component> T invoke(int entityID, ComponentType<T> componentType);
+		<T extends Component> T invoke(ComponentManager componentManager, int entityID, ComponentType<T> componentType);
 
 	}
 

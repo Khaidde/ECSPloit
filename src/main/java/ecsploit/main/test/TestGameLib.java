@@ -11,7 +11,7 @@ class TestGameLib {
 
     private TestGameLib() {}
 
-    public static final class Transform implements Component {
+    public static final class Transform extends Component {
         private int x;
         private int y;
 
@@ -37,7 +37,7 @@ class TestGameLib {
         }
     }
 
-    public static final class Velocity implements Component {
+    public static final class Velocity extends Component {
         private int vx;
         private int vy;
 
@@ -63,7 +63,7 @@ class TestGameLib {
         }
     }
 
-    public static final class Sprite implements Component {
+    public static final class Sprite extends Component {
 
         private String imagePath;
 
@@ -83,7 +83,7 @@ class TestGameLib {
         }
     }
 
-    public static final class TransformContainer implements Component {
+    public static final class TransformContainer extends Component {
 
         private Transform transform;
 
@@ -95,7 +95,7 @@ class TestGameLib {
 
     }
 
-    public static final class MovementSystem extends AbstractSystem {
+    public static final class MovementSystem extends ExecuteSystem {
 
         @TypeTarget(Transform.class)
         protected ComponentType<Transform> transformType;
@@ -116,7 +116,7 @@ class TestGameLib {
         }
     }
 
-    public static final class RenderSystem extends AbstractSystem {
+    public static final class RenderSystem extends ExecuteSystem {
 
         @TypeTarget(Transform.class) private ComponentType<Transform> transformType;
         @TypeTarget(Sprite.class) private ComponentType<Sprite> spriteType;
@@ -134,41 +134,41 @@ class TestGameLib {
     }
 
     @ExecuteBefore(Sys2.class)
-    public static final class Sys1 extends AbstractSystem {
+    public static final class Sys1 extends ExecuteSystem {
         protected void execute() {
             System.out.println("Sys1");
         }
     }
 
-    public static final class Sys2 extends AbstractSystem {
+    public static final class Sys2 extends ExecuteSystem {
         protected void execute() {
             System.out.println("Sys2");
         }
     }
 
     @ExecuteAfter(Sys1.class)
-    public static final class Sys3 extends AbstractSystem {
+    public static final class Sys3 extends ExecuteSystem {
         protected void execute() {
             System.out.println("Sys3");
         }
     }
 
     @ExecuteBefore(Sys3.class)
-    public static final class Sys4 extends AbstractSystem {
+    public static final class Sys4 extends ExecuteSystem {
         protected void execute() {
             System.out.println("Sys4");
         }
     }
 
     @ExecuteAfter(Sys3.class)
-    public static final class Sys5 extends AbstractSystem {
+    public static final class Sys5 extends ExecuteSystem {
         protected void execute() {
             System.out.println("Sys5");
         }
     }
 
     @ExecuteAfter(Sys5.class)
-    public static final class Sys6 extends AbstractSystem {
+    public static final class Sys6 extends ExecuteSystem {
         protected void execute() {
             System.out.println("Sys6");
         }
@@ -176,7 +176,7 @@ class TestGameLib {
 
     @ExecuteBefore(Sys10.class)
     @ExecuteAfter({Sys6.class, Sys4.class})
-    public static final class Sys7 extends AbstractSystem {
+    public static final class Sys7 extends ExecuteSystem {
         protected void execute() {
             System.out.println("Sys7");
         }
@@ -184,20 +184,20 @@ class TestGameLib {
 
     @ExecuteAfter(Sys2.class)
     @ExecuteBefore(Sys7.class)
-    public static final class Sys8 extends AbstractSystem {
+    public static final class Sys8 extends ExecuteSystem {
         protected void execute() {
             System.out.println("Sys8");
         }
     }
 
     @ExecuteAfter({Sys2.class, Sys7.class})
-    public static final class Sys9 extends AbstractSystem {
+    public static final class Sys9 extends ExecuteSystem {
         protected void execute() {
             System.out.println("Sys9");
         }
     }
 
-    public static final class Sys10 extends AbstractSystem {
+    public static final class Sys10 extends ExecuteSystem {
         protected void execute() {
             System.out.println("Sys10");
         }
@@ -205,7 +205,7 @@ class TestGameLib {
 
     @ExecuteBefore(Sys8.class)
     @ExecuteAfter(Sys5.class)
-    public static final class Sys11 extends AbstractSystem {
+    public static final class Sys11 extends ExecuteSystem {
         protected void execute() {
             System.out.println("Sys11");
         }
@@ -213,21 +213,21 @@ class TestGameLib {
 
     @ExecuteAfter(Sys3.class)
     @ExecuteBefore(Sys13.class)
-    public static final class Sys12 extends AbstractSystem {
+    public static final class Sys12 extends ExecuteSystem {
         protected void execute() {
             System.out.println("Sys12");
         }
     }
 
     @ExecuteBefore(Sys14.class)
-    public static final class Sys13 extends AbstractSystem {
+    public static final class Sys13 extends ExecuteSystem {
         protected void execute() {
             System.out.println("Sys13");
         }
     }
 
     @ExecuteBefore(Sys2.class)
-    public static final class Sys14 extends AbstractSystem {
+    public static final class Sys14 extends ExecuteSystem {
         protected void execute() {
             System.out.println("Sys14");
         }

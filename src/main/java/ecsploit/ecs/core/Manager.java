@@ -104,6 +104,16 @@ public class Manager {
 	}
 
 	/**
+	 * Returns an array of all components currently registered in the manager.
+	 *
+	 * @param <T> component types
+	 * @return an array containing all registered component types
+	 */
+	public <T extends Component> ComponentType<T>[] getTypes() {
+		return componentManager.componentTypeMap.getComponentTypes();
+	}
+
+	/**
 	 * Creates Component instance from component class and attempts to attach it to the entity.
 	 * <p>
 	 *     Notes:
@@ -184,7 +194,8 @@ public class Manager {
 	}
 
 	/**
-	 * Safely check whether an entityID has a given component instance of ComponentType. Will not throw errors.
+	 * Safely check whether an entityID has a given component instance of ComponentType. Will not throw errors if
+	 * component has not yet been registered internally by the manager.
 	 *
 	 * @param entity entity to be queried
 	 * @param componentType type of component to be queried
@@ -197,8 +208,8 @@ public class Manager {
 	/**
 	 * Gets a Category object which keeps an up-to-date list of all entities with the corresponding component types.
 	 * <p>
-	 *     Note: It is assumed that component types in the list are unique. Undefined behavior can arise if the same
-	 *     component type is listed repeatedly.
+	 *     Note: It is assumed that component types in the param list are unique. Undefined behavior can arise if the
+	 *     same component type is listed repeatedly.
 	 * </p>
 	 *
 	 * @param componentClasses list of component classes to query
@@ -214,7 +225,7 @@ public class Manager {
 	 * for more details.
 	 *
 	 * @param componentTypes list of component types to query
-	 * @return real-time updated EntityGroup reference
+	 * @return real-time updated Category reference
 	 */
 	@SafeVarargs
 	public final Category categoryT(ComponentType<? extends Component>... componentTypes) {
@@ -228,10 +239,10 @@ public class Manager {
 	}
 
 	/**
-	 * Registers the system into the system. Also injects the system with appropriate dependencies.
+	 * Registers the system into the manager. Also injects the system with appropriate dependencies.
 	 * @param system instance of system to be registered
 	 */
-	public void system(AbstractSystem system) {
+	public void system(BaseSystem system) {
 		systemManager.register(system);
 	}
 
@@ -243,11 +254,10 @@ public class Manager {
 		return systemManager.toString();
 	}
 
+	/**
+	 * Updates the SystemManager by one tick
+	 */
 	public void update() {
-		componentManager.setToDeferredStrategy();
 		systemManager.update();
-		componentManager.setToImmediateStrategy();
-
-		componentManager.clean();
 	}
 }

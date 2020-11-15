@@ -1,3 +1,3 @@
 package ecsploit.ecs.core;
 
-public interface Component {}
+public abstract class Component {}

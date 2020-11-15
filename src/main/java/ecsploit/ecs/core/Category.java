@@ -5,7 +5,7 @@ import ecsploit.utils.collections.SparseList;
 import java.util.function.IntPredicate;
 
 /**
- * Group of entities with a common property
+ * Group of entities with common properties
  */
 public final class Category {
 
@@ -14,6 +14,12 @@ public final class Category {
     protected final EntityStream addStream = new EntityStream();
     protected final EntityStream removeStream = new EntityStream();
     protected final EntityStream changeStream = new EntityStream();
+
+    private final ComponentManager componentManager;
+
+    Category(ComponentManager componentManager) {
+        this.componentManager = componentManager;
+    }
 
     public int size() {
         return this.entities.size();
@@ -49,9 +55,12 @@ public final class Category {
     public void forEachEntity(EntityAction action) {
         if (entities.isEmpty()) return;
         int entitySize = this.entities.size();
+        componentManager.setToDeferredStrategy();
         for (int i = entitySize - 1; i >= 0; i--) {
             action.accept(this.entities.fastGet(i));
         }
+        componentManager.clean();
+        componentManager.setToImmediateStrategy();
     }
 
     /**
@@ -61,7 +70,7 @@ public final class Category {
      * @return a Category where all entities fulfill the filtered condition
      */
     public Category filter(IntPredicate filterCondition) {
-        Category filteredCat = new Category();
+        Category filteredCat = new Category(componentManager);
         if (!entities.isEmpty()) {
             for (int i = this.entities.size() - 1; i >= 0; i--) {
                 int eID = this.entities.fastGet(i);

@@ -28,6 +28,8 @@ public class SystemECSTest {
         manager.system(new TestGameLib.RenderSystem());
         manager.system(new TestGameLib.MovementSystem());
 
+        //System order should be 4, 1, 3, 5, 12, 11, 13, 6, 14, 2, 8, 7, 9, 10
+        //There is some room for variability => multiple valid solutions to the given ordering
         System.out.println(manager.viewSystems());
 
         manager.update();

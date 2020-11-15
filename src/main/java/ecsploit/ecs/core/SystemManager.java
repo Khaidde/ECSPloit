@@ -1,8 +1,42 @@
 package ecsploit.ecs.core;
 
+import ecsploit.ecs.injection.CatTarget;
+import ecsploit.ecs.injection.TypeTarget;
 import ecsploit.utils.debug.ToStringBuilder;
 
+import java.lang.reflect.Field;
+
 public final class SystemManager {
+
+	private static void injectSystemFields(Manager manager, BaseSystem system) {
+		Class<? extends BaseSystem> systemClass = system.getClass();
+		for (Field field : systemClass.getDeclaredFields()) {
+			if (field.isAnnotationPresent(TypeTarget.class)) {
+				TypeTarget componentTypeAnnotation = field.getAnnotation(TypeTarget.class);
+				Class<? extends Component> componentClass = componentTypeAnnotation.value();
+
+				field.setAccessible(true);
+				try {
+					field.set(system, manager.getComponentManager().getComponentType(componentClass));
+				} catch (IllegalArgumentException | IllegalAccessException e) {
+					e.printStackTrace();
+				}
+				continue;
+			}
+			if (field.isAnnotationPresent(CatTarget.class)) {
+				CatTarget componentTypeAnnotation = field.getAnnotation(CatTarget.class);
+				Class<? extends Component>[] componentClasses = componentTypeAnnotation.value();
+				Category category = manager.getComponentManager().getCategory(componentClasses);
+
+				field.setAccessible(true);
+				try {
+					field.set(system, category);
+				} catch (IllegalArgumentException | IllegalAccessException e) {
+					e.printStackTrace();
+				}
+			}
+		}
+	}
 
 	private final SystemGroup rootSystemGroup;
 	
@@ -14,12 +48,17 @@ public final class SystemManager {
 		this.rootSystemGroup = SystemGroup.from("Root");
 	}
 
-	public void register(AbstractSystem system) {
-		this.rootSystemGroup.init(manager);
-		this.rootSystemGroup.insert(system);
+	void register(BaseSystem system) {
+		SystemManager.injectSystemFields(manager, system);
+
+		if (ExecuteSystem.class.isAssignableFrom(system.getClass())) {
+			this.rootSystemGroup.insert((ExecuteSystem) system);
+		}
+
+		system.init(manager);
 	}
 	
-	public void update() {
+	void update() {
 		this.rootSystemGroup.execute();
 	}
 

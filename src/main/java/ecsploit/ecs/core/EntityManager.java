@@ -23,7 +23,7 @@ public final class EntityManager {
 		return maxCapacity - totalRecycled;
 	}
 
-	public static class EntityNotFoundException extends RuntimeException {
+	static class EntityNotFoundException extends RuntimeException {
 		public EntityNotFoundException(String message) {
 			super(message);
 		}

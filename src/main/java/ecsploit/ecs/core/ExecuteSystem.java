@@ -2,9 +2,7 @@ package ecsploit.ecs.core;
 
 import ecsploit.utils.debug.ToStringBuilder;
 
-public abstract class AbstractSystem {
-
-	protected void init(Manager manager) {}
+public abstract class ExecuteSystem implements BaseSystem {
 	
 	protected abstract void execute();
 
