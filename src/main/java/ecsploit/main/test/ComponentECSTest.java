@@ -19,7 +19,7 @@ public class ComponentECSTest {
     public ComponentECSTest() {
         this.manager = new Manager();
 
-        manager.system(SystemGroup.from("OrderedSystems",
+        manager.system(manager.systemGroupFrom("OrderedSystems",
                 new Sys1(),
                 new Sys2(),
                 new Sys3(),

@@ -2,30 +2,25 @@ package ecsploit.ecs.core;
 
 import ecsploit.utils.collections.SparseList;
 
+import java.util.Arrays;
 import java.util.function.IntPredicate;
 
 /**
  * Group of entities with common properties
  */
-public final class Category {
+public class Category {
 
-    private final SparseList entities = new SparseList();
+    final SparseList entities = new SparseList();
 
     protected final EntityStream addStream = new EntityStream();
     protected final EntityStream removeStream = new EntityStream();
     protected final EntityStream changeStream = new EntityStream();
 
-    private final ComponentManager componentManager;
-
-    Category(ComponentManager componentManager) {
-        this.componentManager = componentManager;
-    }
-
     public int size() {
         return this.entities.size();
     }
 
-    boolean contains(int entityID) {
+    public boolean has(int entityID) {
         return this.entities.contains(entityID);
     }
 
@@ -53,14 +48,16 @@ public final class Category {
      * @param action invoked per entity
      */
     public void forEachEntity(EntityAction action) {
-        if (entities.isEmpty()) return;
-        int entitySize = this.entities.size();
-        componentManager.setToDeferredStrategy();
-        for (int i = entitySize - 1; i >= 0; i--) {
+        for (int i = 0; i < this.entities.size(); i++) {
             action.accept(this.entities.fastGet(i));
         }
-        componentManager.clean();
-        componentManager.setToImmediateStrategy();
+    }
+
+    /**
+     * @return list of all entityIDs associated with the category
+     */
+    public int[] getEntityIDs() {
+        return Arrays.copyOf(this.entities.getInnerList(), this.size());
     }
 
     /**
@@ -70,7 +67,7 @@ public final class Category {
      * @return a Category where all entities fulfill the filtered condition
      */
     public Category filter(IntPredicate filterCondition) {
-        Category filteredCat = new Category(componentManager);
+        Category filteredCat = new Category();
         if (!entities.isEmpty()) {
             for (int i = this.entities.size() - 1; i >= 0; i--) {
                 int eID = this.entities.fastGet(i);
@@ -83,12 +80,12 @@ public final class Category {
             if (filterCondition.test(eID)) filteredCat.addInternalEntity(eID);
         });
         this.removeStream.connectObserver(eID -> {
-            if (filteredCat.contains(eID)) filteredCat.removeInternalEntity(eID);
+            if (filteredCat.has(eID)) filteredCat.removeInternalEntity(eID);
         });
         this.changeStream.connectObserver(eID -> {
-            if (!filteredCat.contains(eID) && filterCondition.test(eID)) {
+            if (!filteredCat.has(eID) && filterCondition.test(eID)) {
                 filteredCat.addInternalEntity(eID);
-            } else if (filteredCat.contains(eID)){
+            } else if (filteredCat.has(eID)){
                 filteredCat.removeInternalEntity(eID);
             }
         });

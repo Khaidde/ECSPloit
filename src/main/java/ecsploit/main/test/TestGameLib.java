@@ -106,13 +106,13 @@ class TestGameLib {
         protected Category physicsCat;
 
         public void execute() {
-            physicsCat.forEachEntity(eID -> {
+            for (int eID: physicsCat.getEntityIDs()) {
                 Transform transform = transformType.retrieve(eID);
                 Velocity velocity = velocityType.retrieve(eID);
 
                 transform.x += velocity.vx;
                 transform.y += velocity.vy;
-            });
+            }
         }
     }
 

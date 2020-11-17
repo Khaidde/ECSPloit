@@ -91,7 +91,7 @@ public final class EntityManager {
 
 	void forEach(EntityAction action) {
 		for (int i = 0; i < this.maxCapacity; i++) {
-			if (this.entities[i] == i) {
+			if (this.entities[i] == i) { //Validate that entity id is active
 				action.accept(i);
 			}
 		}

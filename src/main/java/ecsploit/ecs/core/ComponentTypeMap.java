@@ -11,6 +11,12 @@ public final class ComponentTypeMap {
 	private final Map<Class<? extends Component>, ComponentType<?>> componentTypes = new HashMap<>();
 	private int idCounter = 0;
 
+	private final ComponentManager componentManager;
+
+	ComponentTypeMap(ComponentManager componentManager) {
+		this.componentManager = componentManager;
+	}
+
 	private <T extends Component> Supplier<T> getDefaultConstructor(Class<T> componentClass) {
 		try {
 			final Constructor<T> componentConstructor = componentClass.getDeclaredConstructor();
@@ -39,7 +45,7 @@ public final class ComponentTypeMap {
 	<T extends Component> ComponentType<T> getFromID(int componentID) {
 		if (componentID >= componentTypes.size()) return null;
 		for (ComponentType<?> componentType: componentTypes.values()) {
-			if (componentType.getID() == componentID) return (ComponentType<T>) componentType;
+			if (componentType.getComponentID() == componentID) return (ComponentType<T>) componentType;
 		}
 		return null;
 	}

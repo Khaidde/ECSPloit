@@ -13,10 +13,10 @@ public class PackedObjectList<T> {
     private final DenseList<T> denseList;
     private final SparseList sparseList;
 
-    public PackedObjectList() {
-        this.denseList = new DenseList<>();
-        this.sparseList = new SparseList();
-    }
+//    public PackedObjectList() {
+//        this.denseList = new DenseList<>();
+//        this.sparseList = new SparseList();
+//    }
 
     public PackedObjectList(int initialSize) {
         this.denseList = new DenseList<>(initialSize);
@@ -25,6 +25,10 @@ public class PackedObjectList<T> {
 
     public int size() {
         return this.denseList.size();
+    }
+
+    public boolean isEmpty() {
+        return this.denseList.isEmpty();
     }
 
     public T getObject(int id) {

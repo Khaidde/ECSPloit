@@ -5,6 +5,7 @@ import ecsploit.ecs.injection.TypeTarget;
 import ecsploit.utils.debug.ToStringBuilder;
 
 import java.lang.reflect.Field;
+import java.lang.reflect.InaccessibleObjectException;
 
 public final class SystemManager {
 
@@ -15,11 +16,13 @@ public final class SystemManager {
 				TypeTarget componentTypeAnnotation = field.getAnnotation(TypeTarget.class);
 				Class<? extends Component> componentClass = componentTypeAnnotation.value();
 
-				field.setAccessible(true);
 				try {
+					field.setAccessible(true);
 					field.set(system, manager.getComponentManager().getComponentType(componentClass));
-				} catch (IllegalArgumentException | IllegalAccessException e) {
-					e.printStackTrace();
+				} catch (InaccessibleObjectException | IllegalArgumentException | IllegalAccessException e) {
+					throw new IllegalAccessError("Field to be injected with TypeTarget=" +
+							componentClass.getSimpleName() + ".class is not public or inaccessible due to module " +
+							"protection in " + system.getClass().getSimpleName() + ".class");
 				}
 				continue;
 			}
@@ -28,11 +31,18 @@ public final class SystemManager {
 				Class<? extends Component>[] componentClasses = componentTypeAnnotation.value();
 				Category category = manager.getComponentManager().getCategory(componentClasses);
 
-				field.setAccessible(true);
 				try {
+					field.setAccessible(true);
 					field.set(system, category);
-				} catch (IllegalArgumentException | IllegalAccessException e) {
-					e.printStackTrace();
+				} catch (InaccessibleObjectException | IllegalArgumentException | IllegalAccessException e) {
+					StringBuilder componentTypes = new StringBuilder();
+					for (int i = 0; i < componentClasses.length - 1; i++) {
+						componentTypes.append(componentClasses[i].getSimpleName()).append(", ");
+					}
+					componentTypes.append(componentClasses[componentClasses.length - 1].getSimpleName());
+					throw new IllegalAccessError("Field to be injected with Category=[" +
+							componentTypes + "] is not public or inaccessible due to module " +
+							"protection in " + system.getClass().getSimpleName() + ".class");
 				}
 			}
 		}
@@ -45,7 +55,7 @@ public final class SystemManager {
 	SystemManager(Manager manager) {
 		this.manager = manager;
 
-		this.rootSystemGroup = SystemGroup.from("Root");
+		this.rootSystemGroup = this.createSystemGroup("Root");
 	}
 
 	void register(BaseSystem system) {
@@ -56,6 +66,14 @@ public final class SystemManager {
 		}
 
 		system.init(manager);
+	}
+
+	SystemGroup createSystemGroup(String name, ExecuteSystem... systems) {
+		SystemGroup systemGroup = new SystemGroup(name, manager);
+		for (ExecuteSystem system: systems) {
+			systemGroup.insert(system);
+		}
+		return systemGroup;
 	}
 	
 	void update() {

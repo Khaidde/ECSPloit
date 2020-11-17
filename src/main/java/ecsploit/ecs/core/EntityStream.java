@@ -1,22 +1,31 @@
 package ecsploit.ecs.core;
 
-import ecsploit.utils.collections.PackedObjectList;
+import ecsploit.utils.collections.DenseList;
+import ecsploit.utils.collections.SparseList;
 
 /**
  * Stream of entity changes which notifies all observers when a change occurs
  */
 public final class EntityStream {
 
-    private final PackedObjectList<EntityObserver> entityObservers = new PackedObjectList<>();
+    private final DenseList<EntityObserver> entityObservers = new DenseList<>();
+    private final SparseList obseverIDs = new SparseList();
 
     EntityStream() {}
 
     int connectObserver(EntityObserver observer) {
-        return this.entityObservers.addObject(observer);
+        int id = this.obseverIDs.size();
+        this.obseverIDs.add(id);
+        this.entityObservers.add(observer);
+        return id;
     }
 
     EntityObserver disconnectObserver(int observerID) {
-        return this.entityObservers.removeObject(observerID);
+        int index = this.obseverIDs.indexOf(observerID);
+        if (index == -1) return null;
+        EntityObserver object = entityObservers.fastRemove(index);
+        this.obseverIDs.fastRemove(observerID);
+        return object;
     }
 
     void notifyObservers(int entityID) {

@@ -110,6 +110,14 @@ public class SparseList {
         this.size = 0;
     }
 
+    public int[] getInnerList() {
+        return innerList;
+    }
+
+    public int[] getOuterList() {
+        return outerList;
+    }
+
     public String toString() {
         return ToStringBuilder.from(this)
                 .withList("innerList", Collections.singletonList(Arrays.copyOf(this.innerList, size)))

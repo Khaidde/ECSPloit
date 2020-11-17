@@ -1,29 +1,29 @@
 package ecsploit.ecs.core;
 
-import ecsploit.utils.collections.PackedObjectList;
+import ecsploit.utils.collections.DenseList;
 
 import java.util.function.Supplier;
 
-public class ComponentType<T extends Component> {
+public final class ComponentType<T extends Component> extends Category {
 
     private final Class<T> componentClass;
-    private final int id;
+    private final int componentTypeID;
 
     private Supplier<T> componentConstructor;
 
-    private final PackedObjectList<T> mappedComponentInstances = new PackedObjectList<>();
+    private final DenseList<T> componentInstances = new DenseList<>();
 
-    private final EntityStream attachStream = new EntityStream();
-    private final EntityStream detachStream = new EntityStream();
-    private final EntityStream changeStream = new EntityStream();
-
-    ComponentType(Class<T> componentClass, int id) {
+    ComponentType(Class<T> componentClass, int componentTypeID) {
         this.componentClass = componentClass;
-        this.id = id;
+        this.componentTypeID = componentTypeID;
     }
 
-    int getID() {
-        return id;
+    public String getComponentName() {
+        return this.componentClass.getSimpleName();
+    }
+
+    int getComponentID() {
+        return componentTypeID;
     }
 
     /**
@@ -48,36 +48,58 @@ public class ComponentType<T extends Component> {
         this.componentConstructor = componentConstructor;
     }
 
-    boolean contains(int entityID) {
-        return this.mappedComponentInstances.contains(entityID);
+    static class IllegalComponentAccessException extends RuntimeException {
+        public IllegalComponentAccessException(String message) {
+            super(message);
+        }
     }
 
     /**
      * Safe retrieval of component from the ComponentType given an entity id.
+     * @throws IllegalComponentAccessException when entityID is not attached to the associated ComponentType
      *
      * @param entityID id of entity
      * @return component related to the entity or NULL if entity does not contain the component.
      */
     public T retrieve(int entityID) {
-        return this.mappedComponentInstances.getObject(entityID);
+        int index = this.entities.indexOf(entityID);
+        if (index == -1) throw new IllegalComponentAccessException("Entity id=" + entityID + " does not contain ComponentType=" + this.getComponentName());
+        return componentInstances.get(index);
     }
 
-    T addInternalEntity(int entityID) {
+    void addInternalEntity(int entityID) {
+        this.entities.add(entityID);
+    }
+
+    T addAndCreateInternalEntity(int entityID) {
         T componentInstance = this.componentConstructor.get();
-        this.mappedComponentInstances.setObject(entityID, componentInstance);
+        if (this.entities.contains(entityID)) {
+            this.componentInstances.fastSet(this.entities.fastIndexOf(entityID), componentInstance);
+        } else {
+            this.addInternalEntity(entityID);
+            this.componentInstances.add(componentInstance);
+        }
         return componentInstance;
     }
 
-    T removeInternalEntity(int entityID) {
-        if (!this.mappedComponentInstances.contains(entityID)) return null;
-        return this.mappedComponentInstances.removeObject(entityID);
+    void removeInternalEntity(int entityID) {
+        this.entities.fastRemove(entityID);
+    }
+
+    T removeAndGetInternalEntity(int entityID) {
+        if (!this.has(entityID)) return null;
+
+        int index = this.entities.indexOf(entityID);
+        T object = this.componentInstances.fastRemove(index);
+        this.removeInternalEntity(entityID);
+        return object;
     }
 
     /**
      * @return entity stream which triggers on component attaches
      */
     public EntityStream attachStream() {
-        return this.attachStream;
+        return this.addStream;
     }
 
     /**
@@ -92,7 +114,7 @@ public class ComponentType<T extends Component> {
      * @return id of component observer added which can be later used to remove it
      */
     public int onComponentAttach(EntityObserver observer) {
-        return this.attachStream.connectObserver(observer);
+        return this.addStream.connectObserver(observer);
     }
 
     /**
@@ -103,18 +125,18 @@ public class ComponentType<T extends Component> {
      * @return instance of EntityObserver disconnected or NULL if ID was invalid
      */
     public EntityObserver disconnectAttachObserver(int attachObserverID) {
-        return this.attachStream.disconnectObserver(attachObserverID);
+        return this.addStream.disconnectObserver(attachObserverID);
     }
 
     void notifyAttachObservers(int entityID) {
-        this.attachStream.notifyObservers(entityID);
+        this.addStream.notifyObservers(entityID);
     }
 
     /**
      * @return entity stream which triggers on component detaches
      */
     public EntityStream detachStream() {
-        return this.detachStream;
+        return this.removeStream;
     }
 
     /**
@@ -129,7 +151,7 @@ public class ComponentType<T extends Component> {
      * @return id of component observer added which can be later used to remove it
      */
     public int onComponentDetach(EntityObserver observer) {
-        return this.detachStream.connectObserver(observer);
+        return this.removeStream.connectObserver(observer);
     }
 
     /**
@@ -140,11 +162,11 @@ public class ComponentType<T extends Component> {
      * @return instance of EntityObserver disconnected or NULL if ID was invalid
      */
     public EntityObserver disconnectDetachObserver(int detachObserverID) {
-        return this.detachStream.disconnectObserver(detachObserverID);
+        return this.removeStream.disconnectObserver(detachObserverID);
     }
 
     void notifyDetachObservers(int entityID) {
-        this.detachStream.notifyObservers(entityID);
+        this.removeStream.notifyObservers(entityID);
     }
 
     /**
@@ -182,7 +204,7 @@ public class ComponentType<T extends Component> {
      * @param entityID id of entity whose component data has changed
      */
     public void notifyChangeObservers(int entityID) {
-        this.changeStream.notifyObservers(entityID);
+        super.notifyChangeObservers(entityID);
     }
 
     public String toString() {

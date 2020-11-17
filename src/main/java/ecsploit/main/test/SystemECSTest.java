@@ -1,7 +1,6 @@
 package ecsploit.main.test;
 
 import ecsploit.ecs.core.Manager;
-import ecsploit.ecs.core.SystemGroup;
 
 public class SystemECSTest {
 
@@ -9,7 +8,7 @@ public class SystemECSTest {
 
         Manager manager = new Manager();
 
-        manager.system(SystemGroup.from("OrderedSystems",
+        manager.system(manager.systemGroupFrom("OrderedSystems",
                 new TestGameLib.Sys1(),
                 new TestGameLib.Sys2(),
                 new TestGameLib.Sys3(),

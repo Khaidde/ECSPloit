@@ -9,7 +9,7 @@ import java.util.Arrays;
 final class ComponentManager {
 	
 	//Map of componentClass to respective componentType
-	final ComponentTypeMap componentTypeMap = new ComponentTypeMap();
+	final ComponentTypeMap componentTypeMap = new ComponentTypeMap(this);
 	
 	//Map from entityID to respective component bits
 	private BitString[] entityToComponentBits = new BitString[64];
@@ -77,9 +77,9 @@ final class ComponentManager {
 	 */
 	private static final ComponentOperationStrategy immediateAttachStrategy = new ComponentOperationStrategy() {
 		public <T extends Component> T invoke(ComponentManager componentManager, int entityID, ComponentType<T> componentType) {
-			T componentInstance = componentType.addInternalEntity(entityID);
+			T componentInstance = componentType.addAndCreateInternalEntity(entityID);
 
-			componentManager.setComponentBit(entityID, componentType.getID());
+			componentManager.setComponentBit(entityID, componentType.getComponentID());
 			componentType.notifyAttachObservers(entityID);
 			return componentInstance;
 		}
@@ -93,14 +93,14 @@ final class ComponentManager {
 	 *     <ul>
 	 *         <li>Component instance is immediately stored in the ComponentType</li>
 	 *         <li>Component bits for entity are NOT updated immediately</li>
-	 *         <li>EntityGroups are NOT updated as to avoid concurrent modifications</li>
+	 *         <li>Categories are NOT updated as to avoid concurrent modifications</li>
 	 *         <li>Attach ComponentObservers are NOT notified until end of current system update</li>
 	 *     </ul>
 	 * </p>
 	 */
 	private static final ComponentOperationStrategy deferredAttachStrategy = new ComponentOperationStrategy() {
 		public <T extends Component> T invoke(ComponentManager componentManager, int entityID, ComponentType<T> componentType) {
-			T componentInstance = componentType.addInternalEntity(entityID);
+			T componentInstance = componentType.addAndCreateInternalEntity(entityID);
 			componentManager.deferredAttaches.push(new ComponentOperation(entityID, componentType));
 			return componentInstance;
 		}
@@ -129,10 +129,10 @@ final class ComponentManager {
 	 */
 	private static final ComponentOperationStrategy immediateDetachStrategy = new ComponentOperationStrategy() {
 		public <T extends Component> T invoke(ComponentManager componentManager, int entityID, ComponentType<T> componentType) {
-			T componentInstance = componentType.removeInternalEntity(entityID);
+			T componentInstance = componentType.removeAndGetInternalEntity(entityID);
 			if (componentInstance == null) return null;
 
-			componentManager.clearComponentBit(entityID, componentType.getID());
+			componentManager.clearComponentBit(entityID, componentType.getComponentID());
 			componentType.notifyDetachObservers(entityID);
 			return componentInstance;
 		}
@@ -143,15 +143,16 @@ final class ComponentManager {
 	 * <p>
 	 *     Notes:
 	 *     <ul>
+	 *         <li>Component instance is immediately removed from the ComponentType</li>
 	 *         <li>Component bits for entity are NOT updated immediately</li>
-	 *         <li>EntityGroups are NOT updated as to avoid concurrent modifications</li>
+	 *         <li>Categories are NOT updated as to avoid concurrent modifications</li>
 	 *         <li>Attach ComponentObservers are NOT notified until end of current system update</li>
 	 *     </ul>
 	 * </p>
 	 */
 	private static final ComponentOperationStrategy deferredDetachStrategy = new ComponentOperationStrategy() {
 		public <T extends Component> T invoke(ComponentManager componentManager, int entityID, ComponentType<T> componentType) {
-			T componentInstance = componentType.removeInternalEntity(entityID);
+			T componentInstance = componentType.removeAndGetInternalEntity(entityID);
 			if (componentInstance == null) return null;
 			componentManager.deferredDetaches.push(new ComponentOperation(entityID, componentType));
 			return componentInstance;
@@ -176,7 +177,7 @@ final class ComponentManager {
 	 * See {@link Manager#has(Entity, ComponentType) wrapper} for more details.
 	 */
 	boolean has(int entityID, ComponentType<? extends Component> componentType) {
-		return componentType.contains(entityID);
+		return componentType.has(entityID);
 	}
 
 	/**
@@ -198,7 +199,7 @@ final class ComponentManager {
 	final Category getCategoryT(ComponentType<? extends Component>... componentTypes) {
 		BitString queriedComponents = new BitString();
 		for (ComponentType<? extends Component> type: componentTypes) { //Generate bitString from componentType list
-			queriedComponents.set(type.getID());
+			queriedComponents.set(type.getComponentID());
 		}
 		for (int i = 0; i < categories.size(); i++) {
 			if (this.categoryBitStrings.fastGet(i).equals(queriedComponents)) { //Attempt to find cache of queried components
@@ -210,7 +211,7 @@ final class ComponentManager {
 	}
 
 	final Category createNewCategory(BitString queriedComponents, ComponentType<? extends Component>[] componentTypes) {
-		Category category = new Category(this);
+		Category category = new Category();
 		manager.getEntityManager().forEach(entityID -> {
 			if (this.entityToComponentBits[entityID].includes(queriedComponents)) {
 				category.addInternalEntity(entityID);
@@ -221,15 +222,15 @@ final class ComponentManager {
 
 		for (ComponentType<? extends Component> type: componentTypes) { //Add dependency handlers to automatically manage category in the future
 			type.onComponentAttach(entityID -> {
-				if (!category.contains(entityID) && this.entityToComponentBits[entityID].includes(queriedComponents)) {
+				if (!category.has(entityID) && this.entityToComponentBits[entityID].includes(queriedComponents)) {
 					category.addInternalEntity(entityID);
 				}
 			});
 			type.onComponentDetach(entityID -> {
-				if (category.contains(entityID)) category.removeInternalEntity(entityID);
+				if (category.has(entityID)) category.removeInternalEntity(entityID);
 			});
 			type.onComponentChange(entityID -> {
-				if (category.contains(entityID)) category.notifyChangeObservers(entityID);
+				if (category.has(entityID)) category.notifyChangeObservers(entityID);
 			});
 		}
 		return category;
@@ -239,7 +240,7 @@ final class ComponentManager {
 		int totalDeferredAttaches = deferredAttaches.size();
 		for (int i = 0; i < totalDeferredAttaches; i++) {
 			ComponentOperation attachOperation = deferredAttaches.poll();
-			this.setComponentBit(attachOperation.entityID, attachOperation.componentType.getID());
+			this.setComponentBit(attachOperation.entityID, attachOperation.componentType.getComponentID());
 			attachOperation.componentType.notifyAttachObservers(attachOperation.entityID);
 		}
 		this.deferredAttaches.reset();
@@ -247,7 +248,7 @@ final class ComponentManager {
 		int totalDeferredDetaches = deferredDetaches.size();
 		for (int i = 0; i < totalDeferredDetaches; i++) {
 			ComponentOperation detachOperation = deferredDetaches.poll();
-			this.clearComponentBit(detachOperation.entityID, detachOperation.componentType.getID());
+			this.clearComponentBit(detachOperation.entityID, detachOperation.componentType.getComponentID());
 			detachOperation.componentType.notifyDetachObservers(detachOperation.entityID);
 		}
 		this.deferredDetaches.reset();

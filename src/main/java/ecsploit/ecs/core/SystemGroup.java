@@ -5,21 +5,15 @@ import ecsploit.utils.debug.ToStringBuilder;
 public final class SystemGroup extends ExecuteSystem {
 
     private final String name;
+    private final Manager manager;
     private ExecuteSystem[] systems = new ExecuteSystem[]{};
     private final SystemGraph systemGraph = new SystemGraph();
 
     private boolean iterating = false;
 
-    public static SystemGroup from(String name, ExecuteSystem... systems) {
-        SystemGroup systemGroup = new SystemGroup(name);
-        for (ExecuteSystem system: systems) {
-            systemGroup.insert(system);
-        }
-        return systemGroup;
-    }
-
-    private SystemGroup(String name) {
+    SystemGroup(String name, Manager manager) {
         this.name = name;
+        this.manager = manager;
     }
 
     public void insert(ExecuteSystem system) {
@@ -31,7 +25,10 @@ public final class SystemGroup extends ExecuteSystem {
     public void execute() {
         this.iterating = true;
         for (ExecuteSystem system: systems) {
+            this.manager.getComponentManager().setToDeferredStrategy();
             system.execute();
+            this.manager.getComponentManager().clean();
+            this.manager.getComponentManager().setToImmediateStrategy();
         }
         this.iterating = false;
     }

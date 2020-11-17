@@ -232,6 +232,16 @@ public class Manager {
 		return componentManager.getCategoryT(componentTypes);
 	}
 
+	/**
+	 * If a component has been attached to or detached from an entity during a system iteration, some effects will be
+	 * deferred to the end of the system iteration. Call function to immediately handle all deferred component actions
+	 * instead of waiting for the system to iterate once through. As a best practice, use this function sparingly and
+	 * only in the execute method of an ExecuteSystem.
+	 */
+	public void cleanComponents() {
+		componentManager.clean();
+	}
+
 	//SYSTEM MANAGER WRAPPER FUNCTIONS//
 
 	SystemManager getSystemManager() {
@@ -247,6 +257,21 @@ public class Manager {
 	}
 
 	/**
+	 * Create a new SystemGroup to order ExecuteSystems within or to organize multiple systems.
+	 * <p>
+	 *     Note: Only ExecuteSystems can be grouped. Grouping other types of systems is functionally meaningless.
+	 *     Only ExecuteSystems require a set ordering of execution.
+	 * </p>
+	 *
+	 * @param name string identifier of the SystemGroup. Can be arbitrary
+	 * @param systems list of initial systems to include in the SystemGroup
+	 * @return new SystemGroup instance
+	 */
+	public SystemGroup systemGroupFrom(String name, ExecuteSystem... systems) {
+        return systemManager.createSystemGroup(name, systems);
+	}
+
+	/**
 	 * Generates a console message which summarizes currently active systems.
 	 * @return string representation of the SystemManager
 	 */
@@ -258,6 +283,6 @@ public class Manager {
 	 * Updates the SystemManager by one tick
 	 */
 	public void update() {
-		systemManager.update();
+		systemManager. update();
 	}
 }
